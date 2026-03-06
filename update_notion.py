@@ -394,17 +394,22 @@ def update_main_page(content: str):
 if __name__ == "__main__":
     print("🔄 A recolher dados do Notion...")
 
-    tasks     = get_pending_tasks()
-    deadlines = get_upcoming_deadlines()
-    books     = get_current_books()
-    expenses  = get_recent_expenses()
-    journal   = get_last_journal_entry()
+    def safe(fn, name):
+        try:
+            result = fn()
+            print(f"  ✓ {name}")
+            return result
+        except Exception as e:
+            print(f"  ⚠️  {name} falhou: {e}")
+            return [] if "list" in name.lower() else None
 
-    print(f"  ✓ {len(tasks)} tarefas pendentes")
-    print(f"  ✓ {len(deadlines)} entregas próximas")
-    print(f"  ✓ {len(books)} livros em leitura")
-    print(f"  ✓ {len(expenses)} gastos recentes")
-    print(f"  ✓ última entrada: {journal['name'] if journal else '—'}")
+    tasks     = safe(get_pending_tasks,      "tarefas pendentes")
+    deadlines = safe(get_upcoming_deadlines, "entregas próximas")
+    books     = safe(get_current_books,      "livros em leitura")
+    expenses  = safe(get_recent_expenses,    "gastos recentes")
+    journal   = safe(get_last_journal_entry, "última entrada journal")
+
+
 
     content = build_content(tasks, deadlines, books, expenses, journal)
 
