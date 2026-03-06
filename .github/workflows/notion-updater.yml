@@ -1,0 +1,28 @@
+name: Actualizar Notion Main Page
+
+on:
+  schedule:
+    # Corre de 3 em 3 horas (UTC) — 07h, 10h, 13h, 16h, 19h, 22h hora de Lisboa
+    - cron: '0 6,9,12,15,18,21 * * *'
+  workflow_dispatch:  # Permite correr manualmente no GitHub
+
+jobs:
+  update-notion:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Instalar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Instalar dependências
+        run: pip install requests
+
+      - name: Correr script de actualização
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+        run: python update_notion.py
