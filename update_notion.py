@@ -1,6 +1,6 @@
 import os
 import requests
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 NOTION_TOKEN = os.environ["NOTION_TOKEN"]
 MAIN_PAGE_ID = "31bc4bee-3163-81c4-93db-c02608cab7dd"
@@ -16,6 +16,7 @@ TASKS_DB_ID    = "2a7c4bee3163813cbf9acda129ead602"
 EXPENSES_DB_ID = "30dc4bee316381e1b741d99f75355963"
 BOOKS_DB_ID    = "1abc4bee31638134a5d6f84162c5bd91"
 JOURNAL_DB_ID  = "30ac4bee3163818881aec20fa438d8b2"
+STRAVA_DB_ID   = "a7aecc46c1454d9494d7cfb2d87ba57e"
 
 
 # ─── Helpers de dados ────────────────────────────────────────────────────────
@@ -177,6 +178,46 @@ def get_last_journal_entry():
     return None
 
 
+def get_strava_this_week():
+    """Busca actividades do Strava registadas esta semana (desde segunda-feira)."""
+    today = datetime.now()
+    days_since_monday = today.weekday()  # 0=segunda, 6=domingo
+    monday = (today - timedelta(days=days_since_monday)).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    monday_iso = monday.strftime("%Y-%m-%d")
+
+    results = query_db(
+        STRAVA_DB_ID,
+        filter_body={"property": "Data", "date": {"on_or_after": monday_iso}},
+        sorts=[{"property": "Data", "direction": "descending"}],
+        page_size=20,
+    )
+
+    activities = []
+    total_km = 0.0
+    total_min = 0
+
+    for p in results:
+        tipo      = get_prop(p, "Tipo")
+        dist      = get_prop(p, "Distância (km)", 0) or 0
+        tempo     = get_prop(p, "Tempo", "—")
+        pace      = get_prop(p, "Pace Médio", "—")
+        bpm       = get_prop(p, "BPM Médio", None)
+        data      = get_prop(p, "Data", "—")
+        nome      = get_prop(p, "Name", "Treino")
+        url_act   = page_url(p)
+
+        total_km += dist if isinstance(dist, (int, float)) else 0
+        activities.append({
+            "nome": nome, "tipo": tipo, "dist": dist,
+            "tempo": tempo, "pace": pace, "bpm": bpm,
+            "data": data, "url": url_act,
+        })
+
+    return {"activities": activities, "total_km": round(total_km, 2)}
+
+
 # ─── Helpers para construir blocos Notion ────────────────────────────────────
 
 def rt(text, bold=False, url=None):
@@ -230,7 +271,7 @@ def table_block(headers, rows):
 
 # ─── Construção da página ────────────────────────────────────────────────────
 
-def build_blocks(tasks, deadlines, books, expenses, journal):
+def build_blocks(tasks, deadlines, books, expenses, journal, strava):
     now = datetime.now().strftime("%-d de %B de %Y · %H:%M")
     blocks = []
 
@@ -325,6 +366,41 @@ def build_blocks(tasks, deadlines, books, expenses, journal):
     ]))
     blocks.append(divider())
 
+    # ── STRAVA — ESTA SEMANA ───────────────────────────────────────────────
+    blocks.append(heading2("🏃 Treinos Esta Semana"))
+    if strava and strava["activities"]:
+        acts = strava["activities"]
+        total_km = strava["total_km"]
+        n = len(acts)
+        # Resumo geral
+        blocks.append(callout(
+            [rt(f"{n} treino{'s' if n != 1 else ''}  ·  ", bold=True),
+             rt(f"{total_km} km no total esta semana")],
+            icon="📊", color="blue_background"
+        ))
+        # Lista de actividades
+        tipo_icons = {"Corrida": "🏃", "Ciclismo": "🚴", "Caminhada": "🚶", "Natação": "🏊", "Outro": "⚡"}
+        for a in acts:
+            icon = tipo_icons.get(a["tipo"], "⚡")
+            dist_str = f"{a['dist']} km" if isinstance(a["dist"], (int, float)) else "—"
+            bpm_str  = f"  ·  ❤️ {round(a['bpm'])} bpm" if a["bpm"] else ""
+            blocks.append(callout(
+                [rt(f"{fmt_date(a['data'])}  —  ", bold=False),
+                 rt(dist_str, bold=True),
+                 rt(f"  ·  {a['tempo']}  ·  {a['pace']}{bpm_str}  "),
+                 rt("→ Ver", url=a["url"])],
+                icon=icon, color="gray_background"
+            ))
+    else:
+        blocks.append(callout(
+            [rt("Sem treinos registados esta semana. Vai lá! 💪")],
+            icon="🏃", color="gray_background"
+        ))
+    blocks.append(paragraph([
+        rt("→ Ver todos os treinos", url="https://www.notion.so/31bc4bee3163811494fcf3a480a78f17"),
+    ]))
+    blocks.append(divider())
+
     # ── JOURNAL ────────────────────────────────────────────────────────────
     blocks.append(heading2("✏️ Journal"))
     if journal:
@@ -375,9 +451,10 @@ if __name__ == "__main__":
     books     = safe(get_current_books,      "livros em leitura")
     expenses  = safe(get_recent_expenses,    "gastos recentes")
     journal   = safe(get_last_journal_entry, "journal")
+    strava    = safe(get_strava_this_week,   "strava esta semana")
 
     print("📝 A construir blocos...")
-    blocks = build_blocks(tasks or [], deadlines or [], books or [], expenses or [], journal)
+    blocks = build_blocks(tasks or [], deadlines or [], books or [], expenses or [], journal, strava)
 
     print("🚀 A actualizar a Main Page...")
     update_main_page(blocks)
