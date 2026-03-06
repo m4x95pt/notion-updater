@@ -3,7 +3,7 @@ name: Actualizar Notion Main Page
 on:
   schedule:
     # Corre de 3 em 3 horas (UTC) — 07h, 10h, 13h, 16h, 19h, 22h hora de Lisboa
-    - cron: '0 6,9,12,15,18,21 * * *'
+   - cron: '0 7,9,11,13,15,17,19,21 * * *'
   workflow_dispatch:  # Permite correr manualmente no GitHub
 
 jobs:
