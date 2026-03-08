@@ -147,7 +147,7 @@ def get_upcoming_deadlines():
 def get_current_books():
     results = query_db(
         BOOKS_DB_ID,
-        filter_body={"property": "Status", "select": {"equals": "Reading"}},
+        filter_body={"property": "Status", "status": {"equals": "Reading"}},
         page_size=5,
     )
     return [{"title": get_prop(p, "Title"), "author": get_prop(p, "Author"),
