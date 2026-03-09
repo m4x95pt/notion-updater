@@ -121,6 +121,23 @@ def get_pending_tasks():
              "tag": get_prop(p, "Tag"), "url": page_url(p)} for p in results]
 
 
+def get_recurring_tasks():
+    """Tarefas recorrentes activas (não Done, com Recurring Unit definido)."""
+    results = query_db(
+        TASKS_DB_ID,
+        filter_body={"and": [
+            {"property": "Status", "status": {"does_not_equal": "Done"}},
+            {"property": "Status", "status": {"does_not_equal": "Inbox"}},
+            {"property": "Recurring Unit", "select": {"is_not_empty": True}},
+        ]},
+        sorts=[{"property": "Due Date", "direction": "ascending"}],
+        page_size=5,
+    )
+    return [{"name": get_prop(p, "Name"), "status": get_prop(p, "Status"),
+             "priority": get_prop(p, "Priority"), "due": get_prop(p, "Due Date"),
+             "url": page_url(p)} for p in results]
+
+
 def get_upcoming_deadlines():
     results = query_db(
         TASKS_DB_ID,
@@ -271,7 +288,7 @@ def table_block(headers, rows):
 
 # ─── Construção da página ────────────────────────────────────────────────────
 
-def build_blocks(tasks, deadlines, books, expenses, journal, strava):
+def build_blocks(tasks, deadlines, books, expenses, journal, strava, recurring=[]):
     now = datetime.now().strftime("%-d de %B de %Y · %H:%M")
     blocks = []
 
@@ -297,6 +314,19 @@ def build_blocks(tasks, deadlines, books, expenses, journal, strava):
     else:
         blocks.append(callout([rt("Sem tarefas pendentes — bom trabalho! 🎉")],
                                icon="✅", color="green_background"))
+
+    # ── TAREFAS RECORRENTES ───────────────────────────────────────────────
+    if recurring:
+        blocks.append(heading2("🔁 Recorrentes"))
+        for t in recurring:
+            icon = {"High": "🔴", "Medium": "🟡", "Low": "🔵"}.get(t["priority"], "⚪")
+            due_str = f"  ·  {fmt_date(t['due'])}" if t["due"] != "—" else ""
+            blocks.append(callout(
+                [rt(t["name"], bold=True),
+                 rt(f"{due_str}  "),
+                 rt("→ Abrir", url=t["url"])],
+                icon=icon
+            ))
 
     blocks.append(paragraph([
         rt("→ Ver todas as tarefas", url="https://www.notion.so/2a7c4bee3163806e97f4ca613d9f4e9b"),
@@ -448,13 +478,14 @@ if __name__ == "__main__":
     print("🔄 A recolher dados do Notion...")
     tasks     = safe(get_pending_tasks,      "tarefas pendentes")
     deadlines = safe(get_upcoming_deadlines, "entregas próximas")
+    recurring  = safe(get_recurring_tasks,     "tarefas recorrentes")
     books     = safe(get_current_books,      "livros em leitura")
     expenses  = safe(get_recent_expenses,    "gastos recentes")
     journal   = safe(get_last_journal_entry, "journal")
     strava    = safe(get_strava_this_week,   "strava esta semana")
 
     print("📝 A construir blocos...")
-    blocks = build_blocks(tasks or [], deadlines or [], books or [], expenses or [], journal, strava)
+    blocks = build_blocks(tasks or [], deadlines or [], books or [], expenses or [], journal, strava, recurring or [])
 
     print("🚀 A actualizar a Main Page...")
     update_main_page(blocks)
