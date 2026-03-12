@@ -13,6 +13,7 @@ HEADERS = {
 
 # ─── IDs das bases de dados ─────────────────────────────────────────────────
 TASKS_DB_ID    = "2a7c4bee3163813cbf9acda129ead602"
+TOPICS_DB_ID   = "2a5c4bee31638103a42ee9e2fa528806"
 EXPENSES_DB_ID = "30dc4bee316381e1b741d99f75355963"
 BOOKS_DB_ID    = "1abc4bee31638134a5d6f84162c5bd91"
 JOURNAL_DB_ID  = "30ac4bee3163818881aec20fa438d8b2"
@@ -140,24 +141,26 @@ def get_recurring_tasks():
 
 def get_upcoming_deadlines():
     results = query_db(
-        TASKS_DB_ID,
+        TOPICS_DB_ID,
         filter_body={"and": [
-            {"property": "Status", "status": {"does_not_equal": "Done"}},
-            {"property": "Due Date", "date": {"is_not_empty": True}},
+            {"property": "Status", "status": {"does_not_equal": "done"}},
+            {"property": "date", "date": {"is_not_empty": True}},
             {"or": [
-                {"property": "Tag", "select": {"equals": "Study"}},
-                {"property": "Tag", "select": {"equals": "Work"}},
+                {"property": "type", "select": {"equals": "assignment"}},
+                {"property": "type", "select": {"equals": "exam"}},
             ]},
         ]},
-        sorts=[{"property": "Due Date", "direction": "ascending"}],
+        sorts=[{"property": "date", "direction": "ascending"}],
         page_size=5,
     )
     out = []
     for p in results:
-        due = get_prop(p, "Due Date")
+        due = get_prop(p, "date")
         d = days_until(due)
         if d is not None and d <= 14:
-            out.append({"name": get_prop(p, "Name"), "due": due, "days": d, "url": page_url(p)})
+            tipo = get_prop(p, "type")
+            icon = "📝" if tipo == "exam" else "📋"
+            out.append({"name": f"{icon} {get_prop(p, 'lecture/assignment')}", "due": due, "days": d, "url": page_url(p)})
     return out
 
 
