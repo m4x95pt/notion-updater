@@ -4,13 +4,10 @@ on:
   schedule:
     # De 10 em 10 minutos das 7h às 23h hora de Lisboa (UTC+1 = 6h às 22h UTC)
     - cron: '*/10 6-22 * * *'
-    # Uma vez por dia às 7h Lisboa (6h UTC) — para o promote-tasks
-    - cron: '0 6 * * *'
   workflow_dispatch:
 
 jobs:
-  promote-tasks:
-    if: (github.event.schedule == '0 6 * * *') || github.event_name == 'workflow_dispatch'
+  update-notion:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,25 +15,6 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install requests
-      - name: Promover tarefas recorrentes
-        env:
-          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
-        run: python promote_tasks.py
-
-  update-notion:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout do repositório
-        uses: actions/checkout@v4
-
-      - name: Instalar Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Instalar dependências
-        run: pip install requests
-
       - name: Correr script de actualização
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
