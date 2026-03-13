@@ -2,14 +2,15 @@ name: Actualizar Notion Main Page
 
 on:
   schedule:
-    # De hora em hora das 7h às 23h hora de Lisboa (UTC+1 = 6h às 22h UTC)
-   - cron: '*/10 6-22 * * *'
-  workflow_dispatch:  # Permite correr manualmente no GitHub
+    # De 10 em 10 minutos das 7h às 23h hora de Lisboa (UTC+1 = 6h às 22h UTC)
+    - cron: '*/10 6-22 * * *'
+    # Uma vez por dia às 7h Lisboa (6h UTC) — para o promote-tasks
+    - cron: '0 6 * * *'
+  workflow_dispatch:
 
 jobs:
   promote-tasks:
-    # Corre só uma vez por dia às 7h Lisboa (6h UTC) — promove recurring tasks de Inbox → To-Do
-    if: github.event.schedule == '0 6 * * *' || github.event_name == 'workflow_dispatch'
+    if: (github.event.schedule == '0 6 * * *') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
