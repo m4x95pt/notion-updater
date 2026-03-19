@@ -1,74 +1,67 @@
-# notion-updater
+# Main Page Notion Updater
 
-Servidor Express.js auto-hospedado que centraliza automações pessoais via Notion API. Corre num servidor Debian doméstico gerido com pm2, exposto externamente via Cloudflare Tunnel.
+## Overview
 
-## O que faz
+This repository contains automation scripts in Python to update your Notion Main Page with data from personal workflows, including academic, books, tasks, expenses, and fitness activities.
 
-- **Slash commands Slack** para adicionar tarefas, livros e despesas diretamente ao Notion
-- **Sincronização automática** de dados do Strava (corridas, atividades)
-- **Sync do Inforestudante** (UC) — importação de dados académicos para o Notion
-- **Agendamento via cron** — atualizações a cada 10 minutos
+## Features
 
-## Stack
+- **Automatic Notion main page update:** Aggregates tasks, deadlines, reading, expenses, Strava activities, and journal entries and formats them into rich Notion blocks.
+- **Scheduled automation:** Seamlessly run via GitHub Actions or cron jobs.
+- **Task promotion:** Automatically moves tasks from "Inbox" to "To-Do" when their due date arrives.
+- **Integration:** Connects to Notion API ([token-based]) and optional integrations (Strava, Slack commands).
+- **Personal databases:** Uses custom Notion databases for tasks, expenses, books, journal, etc.
 
-- **Runtime:** Node.js + Express.js
-- **Process manager:** pm2
-- **Hosting:** Servidor Debian doméstico (IP estático `192.168.1.158`)
-- **Tunnel:** Cloudflare Tunnel → `pedrosmachine.site`
-- **Integrações:** Notion API, Slack Webhooks
+## Requirements
 
-## Estrutura
+- Python 3.12+
+- `requests` package
+- Notion integration token
 
-```
-notion-updater/
-├── server.js          # Servidor principal + slash commands Slack
-├── ecosystem.config.js # Configuração pm2
-└── .env               # Variáveis de ambiente (não incluído)
-```
+## Usage
 
-## Variáveis de ambiente
+1. Clone the repository:
 
-```env
-NOTION_TOKEN=...
-SLACK_SIGNING_SECRET=...
-SLACK_BOT_TOKEN=...
-STRAVA_CLIENT_ID=...
-STRAVA_CLIENT_SECRET=...
-STRAVA_REFRESH_TOKEN=...
-GMAIL_APP_PASSWORD=...
-```
+   ```bash
+   git clone https://github.com/m4x95pt/notion-updater
+   cd notion-updater
+   pip install requests
+   ```
 
-## Instalação
+2. Set up environment variables (`.env` or export):
 
-```bash
-git clone https://github.com/m4x95pt/notion-updater
-cd notion-updater
-npm install
-cp .env.example .env
-# Preenche as variáveis no .env
-pm2 start ecosystem.config.js
-pm2 save
-```
+   ```
+   NOTION_TOKEN=...
+   # Add integration tokens as needed (STRAVA, SLACK, etc)
+   ```
 
-## Slash Commands Slack disponíveis
+3. Edit database IDs in the scripts if your Notion DBs differ.
 
-| Comando | Descrição |
-|---------|-----------|
-| `/task [nome]` | Adiciona tarefa à DB de Tasks |
-| `/book [título]` | Adiciona livro à DB de Books |
-| `/expense [valor] [categoria] [descrição]` | Regista despesa na DB de Expenses |
+4. Run manually:
+   ```bash
+   python update_notion.py
+   python promote_tasks.py
+   ```
+   Or use the preconfigured GitHub Actions for automation.
 
-## Bases de dados Notion
+## Notion Databases
 
-| DB | ID |
-|----|----|
+| Purpose  | Database ID                        |
+| -------- | ---------------------------------- |
+| Tasks    | `2a7c4bee3163813cbf9acda129ead602` |
 | Expenses | `30dc4bee316381e1b741d99f75355963` |
-| Months | `30dc4bee316381e1a2b2e1f2c0fc42e9` |
+| Books    | `1abc4bee31638134a5d6f84162c5bd91` |
+| Journal  | `30ac4bee3163818881aec20fa438d8b2` |
+| Strava   | `a7aecc46c1454d9494d7cfb2d87ba57e` |
+| Topics   | `2a5c4bee31638103a42ee9e2fa528806` |
 
-## GitHub Actions (workflows automáticos)
+## GitHub Actions Workflows
 
-| Workflow | Schedule |
-|----------|----------|
-| Notion Updater | A cada 10 minutos |
-| Strava Sync | 9h e 10h diariamente |
-| Infoestudante Sync | De hora em hora |
+- **notion-updater.yml**: Updates your Notion page every 10 minutes.
+- **promote-tasks.yml**: Promotes scheduled tasks daily at 6 AM UTC.
+
+## License
+
+MIT License
+
+**Author:** [@m4x95pt](https://github.com/m4x95pt)
